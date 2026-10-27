@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FUN NEXUS — BY SHAHZAIN KHAN</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    /* Canvas styling */
+    canvas { touch-action: none; }
+
+    /* Pulse animation glow */
+    .glow-cyan { box-shadow: 0 0 15px rgba(6, 182, 212, 0.25); }
+    .glow-emerald { box-shadow: 0 0 15px rgba(16, 185, 129, 0.25); }
+    .glow-purple { box-shadow: 0 0 15px rgba(168, 85, 247, 0.25); }
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col selection:bg-cyan-500 selection:text-slate-950">
+
+  <!-- TOP HEADER BANNER -->
+  <header class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 shadow-lg">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('home')">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center font-black text-slate-950 text-xl shadow-lg shadow-cyan-500/20">
+          FN
+        </div>
+        <div>
+          <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 via-emerald-400 to-indigo-300 bg-clip-text text-transparent flex items-center gap-2">
+            FUN NEXUS
+          </h1>
+          <p class="text-xs font-semibold tracking-wider text-slate-400 uppercase">
+            BY SHAHZAIN KHAN
+          </p>
+        </div>
+      </div>
+
+      <!-- Navigation Bar Tabs -->
+      <nav class="flex items-center gap-1 sm:gap-2 overflow-x-auto max-w-full pb-1 md:pb-0" id="navContainer">
+        <!-- Navigation Buttons rendered dynamically -->
+      </nav>
+
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6" id="mainContainer">
+    <!-- View content (Home, Apps, Games) rendered dynamically here -->
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-900/60 border-t border-slate-800/60 py-4 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <p>© FUN NEXUS — Crafted with passion by <span class="text-slate-300 font-bold">SHAHZAIN KHAN</span></p>
+      <p class="text-slate-400">Modular Web Playground & Games Hub</p>
+    </div>
+  </footer>
+
+  <!-- JAVASCRIPT ENGINE -->
+  <script>
+    // ==========================================
+    // AUDIO UTILITY (Web Audio API Cash Chime)
+    // ==========================================
+    const playCashSound = () => {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+        
+        // Osc 1 (Coin chime tone)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(987.77, now); // B5
+        osc1.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+        gain1.gain.setValueAtTime(0.15, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.35);
+
+        // Osc 2 (Register shimmer)
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(1567.98, now + 0.05); // G6
+        gain2.gain.setValueAtTime(0.1, now + 0.05);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.05);
+        osc2.stop(now + 0.4);
+      } catch (e) { console.log(e); }
+    };
+
+    // ==========================================
+    // DATA & GLOBAL STATE
+    // ==========================================
+    let currentTab = 'home';
+    let activeGameInstance = null;
+
+    // Spending Simulator Global State
+    let spendBudget = 1000000000000; // $1 Trillion starting
+    const TOTAL_BUDGET = 1000000000000;
+    let spendCart = [];
+    let activeProductView = null;
+
+    // Format currency helper
+    const formatUSD = (amount) => {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0
+      }).format(amount);
+    };
+
+    // ==========================================
+    // DEFAULT PRODUCTS CATALOG
+    // ==========================================
+    const DEFAULT_PRODUCTS = [
+      {
+        id: 'p1',
+        title: 'Apple iPhone 16 Pro Max (1TB)',
+        category: 'Electronics',
+        price: 1599,
+        rating: 4.8,
+        reviews: 14200,
+        prime: true,
+        image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&auto=format&fit=crop&q=80',
+        desc: 'Titanium design, A18 Pro chip, 48MP Fusion camera system, and industry-leading battery life.'
+      },
+      {
+        id: 'p2',
+        title: 'Bugatti Tourbillon Hypercar (2026)',
+        category: 'Supercars',
+        price: 4100000,
+        rating: 5.0,
+        reviews: 42,
+        prime: false,
+        image: 'https://images.unsplash.com/photo-1544829099-b9a0c07fad1a?w=600&auto=format&fit=crop&q=80',
+        desc: '1,800 HP naturally aspirated V16 hybrid engine. Top speed 276 mph. Handcrafted luxury.'
+      },
+      {
+        id: 'p3',
+        title: 'Luxury Beverly Hills Megamansion',
+        category: 'Real Estate',
+        price: 65000000,
+        rating: 4.9,
+        reviews: 18,
+        prime: false,
+        image: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=600&auto=format&fit=crop&q=80',
+        desc: '12 Bedrooms, 18 Bathrooms, Infinity pool overlooking LA, 20-car subterranean garage, and heliport.'
+      },
+      {
+        id: 'p4',
+        title: 'Rolex Daytona Platinum Ice Blue',
+        category: 'Luxury Watches',
+        price: 89000,
+        rating: 4.9,
+        reviews: 310,
+        prime: true,
+        image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80',
+        desc: '950 platinum chronograph with ice blue dial, chestnut brown Cerachrom bezel, and transparent case back.'
+      },
+      {
+        id: 'p5',
+        title: 'Gulfstream G700 Private Jet',
+        category: 'Aviation',
+        price: 75000000,
+        rating: 5.0,
+        reviews: 8,
+        prime: false,
+        image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600&auto=format&fit=crop&q=80',
+        desc: 'Flies up to 7,750 nautical miles at Mach 0.90. Ultra-long range with 5 custom living spaces.'
+      },
+      {
+        id: 'p6',
+        title: 'Sony PlayStation 5 Pro Console',
+        category: 'Gaming',
+        price: 699,
+        rating: 4.7,
+        reviews: 8900,
+        prime: true,
+        image: 'https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=600&auto=format&fit=crop&q=80',
+        desc: 'PSSR AI Upscaling, 2TB SSD, Advanced Ray Tracing, and high frame rate 4K gaming.'
+      },
+      {
+        id: 'p7',
+        title: 'Nike Air Jordan 1 Retro High OG',
+        category: 'Footwear',
+        price: 180,
+        rating: 4.8,
+        reviews: 24500,
+        prime: true,
+        image: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=600&auto=format&fit=crop&q=80',
+        desc: 'Iconic Chicago colourway high-top sneaker crafted with premium full-grain leather.'
+      },
+      {
+        id: 'p8',
+        title: '100 ft Superyacht Megaship',
+        category: 'Maritime',
+        price: 28000000,
+        rating: 4.9,
+        reviews: 12,
+        prime: false,
+        image: 'https://images.unsplash.com/photo-1569263979104-865ab7cd8d13?w=600&auto=format&fit=crop&q=80',
+        desc: 'Custom titanium hull, 3 deck levels, jacuzzi, jet ski launch bay, and full master suites.'
+      }
+    ];
+
+    // ==========================================
+    // REAL-TIME SEARCH API & SYNTHESIS ALGORITHM
+    // ==========================================
+    async function searchLiveProducts(query) {
+      if (!query || query.trim() === '') return DEFAULT_PRODUCTS;
+      
+      const cleanQ = query.trim().toLowerCase();
+
+      try {
+        // Query Wikipedia Live API for real product search results
+        const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanQ)}&format=json&origin=*&srlimit=6`;
+        const res = await fetch(wikiUrl);
+        const data = await res.json();
+        
+        if (data && data.query && data.query.search && data.query.search.length > 0) {
+          const results = data.query.search.map((item, index) => {
+            const title = item.title;
+            const snippet = item.snippet.replace(/<\/?[^>]+(>|$)/g, ""); // Strip HTML
+            
+            // Smart Price Estimation Logic based on keywords
+            let estimatedPrice = 150;
+            if (cleanQ.includes('car') || cleanQ.includes('ferrari') || cleanQ.includes('lamborghini') || cleanQ.includes('bugatti') || cleanQ.includes('porsche')) {
+              estimatedPrice = 250000 + (index * 150000);
+            } else if (cleanQ.includes('house') || cleanQ.includes('mansion') || cleanQ.includes('villa') || cleanQ.includes('island')) {
+              estimatedPrice = 12000000 + (index * 8000000);
+            } else if (cleanQ.includes('jet') || cleanQ.includes('plane') || cleanQ.includes('yacht') || cleanQ.includes('helicopter')) {
+              estimatedPrice = 35000000 + (index * 20000000);
+            } else if (cleanQ.includes('phone') || cleanQ.includes('laptop') || cleanQ.includes('macbook') || cleanQ.includes('tv') || cleanQ.includes('watch')) {
+              estimatedPrice = 800 + (index * 400);
+            } else if (cleanQ.includes('shirt') || cleanQ.includes('shoe') || cleanQ.includes('snack') || cleanQ.includes('book') || cleanQ.includes('game')) {
+              estimatedPrice = 25 + (index * 35);
+            } else {
+              estimatedPrice = 120 + (index * 90);
+            }
+
+            // Keyword photo search
+            const imgQuery = encodeURIComponent(title.split(' ')[0] || cleanQ);
+            const imgUrl = `https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80&sig=${index}`;
+
+            return {
+              id: `wiki-${item.pageid}`,
+              title: title,
+              category: 'Search Result',
+              price: estimatedPrice,
+              rating: (4.2 + (index % 8) * 0.1).toFixed(1),
+              reviews: 120 + (index * 84),
+              prime: index % 2 === 0,
+              image: `https://source.unsplash.com/600x400/?${imgQuery},product` || imgUrl,
+              desc: snippet || `High quality item live searched from the web matching "${query}".`
+            };
+          });
+          return results;
+        }
+      } catch (err) {
+        console.warn("API Search fallback to heuristic generator:", err);
+      }
+
+      // Fallback Dynamic Search Heuristic
+      return Array.from({ length: 6 }).map((_, i) => ({
+        id: `gen-${Date.now()}-${i}`,
+        title: `${query.toUpperCase()} - Model ${i + 1}`,
+        category: 'Live Web Product',
+        price: Math.floor(Math.random() * 5000) + 99,
+        rating: (4.0 + Math.random() * 0.9).toFixed(1),
+        reviews: Math.floor(Math.random() * 1000) + 50,
+        prime: true,
+        image: `https://source.unsplash.com/600x400/?${encodeURIComponent(query)},item`,
+        desc: `Authentic ${query} verified through FUN NEXUS live Amazon web index.`
+      }));
+    }
+
+
+    // ==========================================
+    // GAMES & APPS MODULAR DEFINITIONS
+    // ==========================================
+    const GAMES_LIST = [
+      {
+        id: "amazon-simulator",
+        title: "$1 Trillion Amazon Simulator",
+        category: "Economy / Shopping",
+        icon: "🛍️",
+        desc: "Live search the web for any product and buy anything you want with a $1 Trillion budget!",
+        render: (container) => {
+          container.innerHTML = `
+            <div class="space-y-6">
+              
+              <!-- Sticky Trillion Dollar Budget Header -->
+              <div class="bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-xl glow-emerald sticky top-16 z-40 backdrop-blur-md">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div>
+                    <span class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Remaining Budget</span>
+                    <div id="budgetDisplay" class="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tight font-mono">
+                      ${formatUSD(spendBudget)}
+                    </div>
+                  </div>
+
+                  <!-- Budget Bar -->
+                  <div class="w-full md:w-1/3 bg-slate-800 h-3 rounded-full overflow-hidden border border-slate-700">
+                    <div id="budgetProgressBar" class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full transition-all duration-300" style="width: ${(spendBudget / TOTAL_BUDGET) * 100}%"></div>
+                  </div>
+
+                  <!-- Reset / Cart Action -->
+                  <div class="flex items-center gap-3">
+                    <button id="resetBudgetBtn" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 rounded-xl transition border border-slate-700">
+                      Reset $1T
+                    </button>
+                    <div class="text-right">
+                      <div id="itemsBoughtCount" class="text-xs font-bold text-slate-400">Items Bought: 0</div>
+                      <div id="totalSpentText" class="text-xs text-slate-500 font-mono">Spent: $0</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Search Bar & Controls -->
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-3 shadow-md">
+                <div class="relative flex-1 w-full">
+                  <i data-lucide="search" class="absolute left-3.5 top-3.5 text-slate-400 w-5 h-5"></i>
+                  <input type="text" id="liveSearchInput" placeholder="Search internet for ANYTHING (e.g. Bugatti, iPhone 16, Jet, Rolex, Pizza)..." 
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition">
+                </div>
+                <button id="searchBtn" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-bold rounded-xl hover:opacity-90 transition shadow-lg shadow-cyan-500/20 text-sm flex items-center justify-center gap-2">
+                  <span>Live Search</span>
+                </button>
+              </div>
+
+              <!-- Products Grid & Embedded View Area -->
+              <div id="storeViewArea" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Product Cards Rendered Dynamically -->
+              </div>
+
+            </div>
+          `;
+
+          // Dynamic Rendering Logic
+          const storeViewArea = container.querySelector('#storeViewArea');
+          const searchInput = container.querySelector('#liveSearchInput');
+          const searchBtn = container.querySelector('#searchBtn');
+          const resetBtn = container.querySelector('#resetBudgetBtn');
+
+          const updateBudgetHeader = () => {
+            const display = container.querySelector('#budgetDisplay');
+            const progress = container.querySelector('#budgetProgressBar');
+            const itemsCount = container.querySelector('#itemsBoughtCount');
+            const totalSpent = container.querySelector('#totalSpentText');
+
+            if (display) display.textContent = formatUSD(spendBudget);
+            if (progress) progress.style.width = `${(spendBudget / TOTAL_BUDGET) * 100}%`;
+            
+            const count = spendCart.reduce((acc, curr) => acc + curr.qty, 0);
+            const spent = TOTAL_BUDGET - spendBudget;
+            if (itemsCount) itemsCount.textContent = `Items Bought: ${count}`;
+            if (totalSpent) totalSpent.textContent = `Spent: ${formatUSD(spent)}`;
+          };
+
+          const renderProducts = (products) => {
+            storeViewArea.innerHTML = '';
+            products.forEach(prod => {
+              const card = document.createElement('div');
+              card.className = "bg-slate-900 border border-slate-800 hover:border-cyan-500/50 rounded-2xl p-4 flex flex-col justify-between transition duration-200 group hover:shadow-lg hover:shadow-cyan-500/10";
+              card.innerHTML = `
+                <div>
+                  <!-- Image -->
+                  <div class="w-full h-44 bg-slate-950 rounded-xl overflow-hidden mb-3 border border-slate-800/80 relative">
+                    <img src="${prod.image}" alt="${prod.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" 
+                      onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80';"/>
+                    ${prod.prime ? `<span class="absolute top-2 left-2 bg-amber-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full shadow">PRIME</span>` : ''}
+                  </div>
+
+                  <!-- Details -->
+                  <div class="text-xs font-semibold text-cyan-400 mb-1">${prod.category}</div>
+                  <h4 class="font-bold text-slate-100 text-sm line-clamp-2 mb-2 group-hover:text-cyan-300 transition">${prod.title}</h4>
+                  <p class="text-xs text-slate-400 line-clamp-2 mb-3">${prod.desc}</p>
+                </div>
+
+                <div>
+                  <div class="text-lg font-extrabold text-slate-100 font-mono mb-3">${formatUSD(prod.price)}</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <button class="buyBtn px-3 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl transition shadow flex items-center justify-center gap-1">
+                      <span>Buy 1</span>
+                    </button>
+                    <a href="https://www.amazon.com/s?k=${encodeURIComponent(prod.title)}" target="_blank" rel="noopener noreferrer" 
+                      class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition text-center border border-slate-700 flex items-center justify-center gap-1">
+                      <span>Amazon</span>
+                      <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                  </div>
+                </div>
+              `;
+
+              // Buy action event
+              const buyBtn = card.querySelector('.buyBtn');
+              buyBtn.addEventListener('click', () => {
+                if (spendBudget >= prod.price) {
+                  spendBudget -= prod.price;
+                  const existing = spendCart.find(item => item.id === prod.id);
+                  if (existing) {
+                    existing.qty += 1;
+                  } else {
+                    spendCart.push({ ...prod, qty: 1 });
+                  }
+                  playCashSound();
+                  updateBudgetHeader();
+                } else {
+                  alert("You've spent the whole $1 Trillion!");
+                }
+              });
+
+              storeViewArea.appendChild(card);
+            });
+            lucide.createIcons();
+          };
+
+          // Search Handlers
+          const executeSearch = async () => {
+            const query = searchInput.value;
+            storeViewArea.innerHTML = `<div class="col-span-full py-12 text-center text-slate-400"><div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-cyan-500 border-t-transparent mb-2"></div><p class="text-sm font-semibold">Live searching web for "${query}"...</p></div>`;
+            const results = await searchLiveProducts(query);
+            renderProducts(results);
+          };
+
+          searchBtn.addEventListener('click', executeSearch);
+          searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') executeSearch();
+          });
+
+          resetBtn.addEventListener('click', () => {
+            if (confirm("Reset your budget back to $1,000,000,000,000?")) {
+              spendBudget = TOTAL_BUDGET;
+              spendCart = [];
+              updateBudgetHeader();
+            }
+          });
+
+          // Initial Render
+          renderProducts(DEFAULT_PRODUCTS);
+          updateBudgetHeader();
+        }
+      },
+      {
+        id: "2d-drift-racer",
+        title: "2D Pixel Drift Racer",
+        category: "Arcade / Racing",
+        icon: "🏎️",
+        desc: "Top-down retro pixel drift game. Use WASD or Arrow keys to drift around corners and set high scores!",
+        render: (container) => {
+          container.innerHTML = `
+            <div class="flex flex-col items-center justify-center space-y-4">
+              
+              <!-- Score & Speed Header -->
+              <div class="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+                <div class="flex items-center gap-4">
+                  <div>
+                    <span class="text-xs text-slate-400 font-bold uppercase">Drift Score</span>
+                    <div id="driftScore" class="text-xl font-mono font-black text-cyan-400">0</div>
+                  </div>
+                  <div>
+                    <span class="text-xs text-slate-400 font-bold uppercase">Speed</span>
+                    <div id="speedometer" class="text-xl font-mono font-black text-emerald-400">0 MPH</div>
+                  </div>
+                </div>
+
+                <div class="text-xs text-slate-400 font-medium hidden sm:block">
+                  Controls: <span class="bg-slate-800 px-2 py-1 rounded border border-slate-700 text-slate-200">WASD</span> or <span class="bg-slate-800 px-2 py-1 rounded border border-slate-700 text-slate-200">Arrows</span>
+                </div>
+              </div>
+
+              <!-- Game Canvas -->
+              <div class="relative w-full max-w-3xl aspect-[16/9] bg-slate-950 rounded-2xl overflow-hidden border-2 border-slate-800 shadow-2xl glow-cyan">
+                <canvas id="driftCanvas" class="w-full h-full block"></canvas>
+              </div>
+
+            </div>
+          `;
+
+          // Setup Canvas Game Loop
+          const canvas = container.querySelector('#driftCanvas');
+          const ctx = canvas.getContext('2d');
+          
+          canvas.width = 800;
+          canvas.height = 450;
+
+          // Game Physics State
+          let car = {
+            x: 400,
+            y: 225,
+            angle: 0,
+            speed: 0,
+            maxSpeed: 6.5,
+            accel: 0.15,
+            friction: 0.96,
+            steer: 0.06,
+            driftScore: 0
+          };
+
+          let keys = {};
+          let particles = [];
+          let skidmarks = [];
+
+          const handleKeyDown = (e) => { keys[e.key] = true; };
+          const handleKeyUp = (e) => { keys[e.key] = false; };
+
+          window.addEventListener('keydown', handleKeyDown);
+          window.addEventListener('keyup', handleKeyUp);
+
+          // Game Loop
+          function gameLoop() {
+            if (!document.body.contains(canvas)) {
+              window.removeEventListener('keydown', handleKeyDown);
+              window.removeEventListener('keyup', handleKeyUp);
+              return; // Stop if unmounted
+            }
+
+            // Input Handling
+            if (keys['ArrowUp'] || keys['w'] || keys['W']) {
+              car.speed = Math.min(car.speed + car.accel, car.maxSpeed);
+            } else if (keys['ArrowDown'] || keys['s'] || keys['S']) {
+              car.speed = Math.max(car.speed - car.accel, -car.maxSpeed * 0.4);
+            } else {
+              car.speed *= car.friction;
+            }
+
+            if (Math.abs(car.speed) > 0.2) {
+              const direction = car.speed > 0 ? 1 : -1;
+              if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                car.angle -= car.steer * direction;
+              }
+              if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                car.angle += car.steer * direction;
+              }
+            }
+
+            // Drift Physics Logic
+            car.x += Math.cos(car.angle) * car.speed;
+            car.y += Math.sin(car.angle) * car.speed;
+
+            // Screen Bounds Wrap
+            if (car.x < 0) car.x = canvas.width;
+            if (car.x > canvas.width) car.x = 0;
+            if (car.y < 0) car.y = canvas.height;
+            if (car.y > canvas.height) car.y = 0;
+
+            // Track Skidmarks and Drift Points
+            const isDrifting = Math.abs(car.speed) > 3 && (keys['a'] || keys['A'] || keys['d'] || keys['D'] || keys['ArrowLeft'] || keys['ArrowRight']);
+            if (isDrifting) {
+              car.driftScore += Math.floor(Math.abs(car.speed) * 2);
+              
+              // Add Smoke Particle
+              particles.push({
+                x: car.x - Math.cos(car.angle) * 15,
+                y: car.y - Math.sin(car.angle) * 15,
+                size: Math.random() * 4 + 2,
+                alpha: 0.6
+              });
+            }
+
+            // Render Track Background
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Track Boundary Grid
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 40) {
+              ctx.beginPath();
+              ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height);
+              ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 40) {
+              ctx.beginPath();
+              ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);
+              ctx.stroke();
+            }
+
+            // Draw Smoke Particles
+            particles.forEach((p, idx) => {
+              ctx.fillStyle = `rgba(148, 163, 184, ${p.alpha})`;
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+              ctx.fill();
+              p.alpha -= 0.02;
+              p.size += 0.2;
+              if (p.alpha <= 0) particles.splice(idx, 1);
+            });
+
+            // Draw Pixel Drift Car
+            ctx.save();
+            ctx.translate(car.x, car.y);
+            ctx.rotate(car.angle);
+
+            // Car Body
+            ctx.fillStyle = '#06b6d4'; // Cyan primary
+            ctx.fillRect(-14, -8, 28, 16);
+            ctx.fillStyle = '#0e7490';
+            ctx.fillRect(-6, -6, 12, 12);
+
+            // Headlights
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(12, -7, 3, 4);
+            ctx.fillRect(12, 3, 3, 4);
+
+            ctx.restore();
+
+            // Update UI Elements
+            const scoreText = container.querySelector('#driftScore');
+            const speedText = container.querySelector('#speedometer');
+            if (scoreText) scoreText.textContent = car.driftScore.toLocaleString();
+            if (speedText) speedText.textContent = `${Math.floor(Math.abs(car.speed) * 15)} MPH`;
+
+            requestAnimationFrame(gameLoop);
+          }
+
+          requestAnimationFrame(gameLoop);
+        }
+      },
+      {
+        id: "element-fusion-lab",
+        title: "Element Fusion Lab",
+        category: "Physics Sandbox",
+        icon: "🧪",
+        desc: "Spawn zero-G atoms and trigger dynamic chemical fusion reactions!",
+        render: (container) => {
+          container.innerHTML = `
+            <div class="flex flex-col items-center space-y-4">
+              
+              <!-- Controls Header -->
+              <div class="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0" id="elementPicker">
+                  <!-- Dynamic element buttons -->
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button id="clearParticlesBtn" class="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold rounded-xl border border-rose-500/30 transition">
+                    Clear Canvas
+                  </button>
+                  <div class="text-xs font-mono text-slate-400">
+                    Fusions: <span id="fusionCount" class="text-cyan-400 font-bold">0</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sandbox Canvas -->
+              <div class="relative w-full max-w-4xl aspect-[16/9] bg-slate-950 rounded-2xl overflow-hidden border-2 border-slate-800 shadow-2xl glow-purple">
+                <canvas id="sandboxCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+              </div>
+
+            </div>
+          `;
+
+          const canvas = container.querySelector('#sandboxCanvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = 900;
+          canvas.height = 500;
+
+          // Elements Config
+          const ELEMENTS = {
+            FIRE: { name: 'Fire', color: '#f97316', icon: '🔥' },
+            WATER: { name: 'Water', color: '#06b6d4', icon: '💧' },
+            ICE: { name: 'Ice', color: '#38bdf8', icon: '🧊' },
+            LIGHTNING: { name: 'Lightning', color: '#eab308', icon: '⚡' },
+            ACID: { name: 'Acid', color: '#84cc16', icon: '🧪' },
+            PLASMA: { name: 'Plasma', color: '#a855f7', icon: '💥' }
+          };
+
+          let activeElement = 'FIRE';
+          let atoms = [];
+          let totalFusions = 0;
+
+          // Render Picker Buttons
+          const pickerContainer = container.querySelector('#elementPicker');
+          Object.keys(ELEMENTS).forEach(key => {
+            const el = ELEMENTS[key];
+            const btn = document.createElement('button');
+            btn.className = `px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 border ${key === activeElement ? 'bg-cyan-500 text-slate-950 border-cyan-400' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`;
+            btn.innerHTML = `<span>${el.icon}</span> <span>${el.name}</span>`;
+            btn.onclick = () => {
+              activeElement = key;
+              Array.from(pickerContainer.children).forEach(c => c.className = c.className.replace('bg-cyan-500 text-slate-950 border-cyan-400', 'bg-slate-800 text-slate-300 border-slate-700'));
+              btn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 border bg-cyan-500 text-slate-950 border-cyan-400';
+            };
+            pickerContainer.appendChild(btn);
+          });
+
+          // Canvas Interaction
+          canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            for (let i = 0; i < 5; i++) {
+              atoms.push({
+                x: x + (Math.random() - 0.5) * 20,
+                y: y + (Math.random() - 0.5) * 20,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4,
+                type: activeElement,
+                radius: 8
+              });
+            }
+          });
+
+          container.querySelector('#clearParticlesBtn').onclick = () => { atoms = []; };
+
+          // Simulation Loop
+          function simLoop() {
+            if (!document.body.contains(canvas)) return;
+
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Update & Draw Atoms
+            for (let i = atoms.length - 1; i >= 0; i--) {
+              let a = atoms[i];
+              a.x += a.vx;
+              a.y += a.vy;
+
+              // Wall bounce
+              if (a.x < a.radius || a.x > canvas.width - a.radius) a.vx *= -1;
+              if (a.y < a.radius || a.y > canvas.height - a.radius) a.vy *= -1;
+
+              // Collision Detection & Fusion Physics
+              for (let j = i - 1; j >= 0; j--) {
+                let b = atoms[j];
+                let dx = b.x - a.x;
+                let dy = b.y - a.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < a.radius + b.radius) {
+                  // Reactions
+                  if ((a.type === 'FIRE' && b.type === 'WATER') || (a.type === 'WATER' && b.type === 'FIRE')) {
+                    atoms.splice(i, 1);
+                    atoms.splice(j, 1);
+                    totalFusions++;
+                    container.querySelector('#fusionCount').textContent = totalFusions;
+                    break;
+                  }
+                }
+              }
+
+              // Draw Atom
+              ctx.fillStyle = ELEMENTS[a.type].color;
+              ctx.beginPath();
+              ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            requestAnimationFrame(simLoop);
+          }
+
+          requestAnimationFrame(simLoop);
+        }
+      }
+    ];
+
+    // ==========================================
+    // NAVIGATION & VIEW SWITCHER
+    // ==========================================
+    function switchTab(tabId) {
+      currentTab = tabId;
+      renderNavigation();
+      renderMainView();
+    }
+
+    function renderNavigation() {
+      const navContainer = document.getElementById('navContainer');
+      navContainer.innerHTML = '';
+
+      // Home Nav Item
+      const homeBtn = document.createElement('button');
+      homeBtn.className = `px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border ${currentTab === 'home' ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800'}`;
+      homeBtn.innerHTML = `<i data-lucide="layout-grid" class="w-3.5 h-3.5"></i><span>All Apps</span>`;
+      homeBtn.onclick = () => switchTab('home');
+      navContainer.appendChild(homeBtn);
+
+      // Render Dynamic Game Tabs
+      GAMES_LIST.forEach(game => {
+        const btn = document.createElement('button');
+        btn.className = `px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border ${currentTab === game.id ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800'}`;
+        btn.innerHTML = `<span>${game.icon}</span><span>${game.title}</span>`;
+        btn.onclick = () => switchTab(game.id);
+        navContainer.appendChild(btn);
+      });
+
+      lucide.createIcons();
+    }
+
+    function renderMainView() {
+      const mainContainer = document.getElementById('mainContainer');
+      mainContainer.innerHTML = '';
+
+      if (currentTab === 'home') {
+        // Grid View of All Experiences
+        const grid = document.createElement('div');
+        grid.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6";
+
+        GAMES_LIST.forEach(game => {
+          const card = document.createElement('div');
+          card.className = "bg-slate-900 border border-slate-800 hover:border-cyan-500/50 rounded-3xl p-6 flex flex-col justify-between transition duration-300 cursor-pointer group hover:shadow-2xl hover:shadow-cyan-500/10";
+          card.onclick = () => switchTab(game.id);
+
+          card.innerHTML = `
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700/60 flex items-center justify-center text-2xl group-hover:scale-110 transition duration-300">
+                  ${game.icon}
+                </div>
+                <span class="text-xs font-bold px-3 py-1 rounded-full bg-slate-800 text-cyan-400 border border-slate-700">
+                  ${game.category}
+                </span>
+              </div>
+              <h3 class="text-xl font-extrabold text-slate-100 mb-2 group-hover:text-cyan-300 transition">${game.title}</h3>
+              <p class="text-sm text-slate-400 leading-relaxed mb-6">${game.desc}</p>
+            </div>
+
+            <div class="flex items-center text-xs font-bold text-cyan-400 group-hover:text-cyan-300">
+              <span>Launch App</span>
+              <i data-lucide="arrow-right" class="w-4 h-4 ml-1 group-hover:translate-x-1 transition"></i>
+            </div>
+          `;
+
+          grid.appendChild(card);
+        });
+
+        mainContainer.appendChild(grid);
+        lucide.createIcons();
+      } else {
+        // Render Active Game
+        const selectedGame = GAMES_LIST.find(g => g.id === currentTab);
+        if (selectedGame) {
+          const viewWrapper = document.createElement('div');
+          selectedGame.render(viewWrapper);
+          mainContainer.appendChild(viewWrapper);
+          lucide.createIcons();
+        }
+      }
+    }
+
+    // Initialize App on Page Load
+    window.addEventListener('DOMContentLoaded', () => {
+      renderNavigation();
+      renderMainView();
+    });
+  </script>
+</body>
+</html>
